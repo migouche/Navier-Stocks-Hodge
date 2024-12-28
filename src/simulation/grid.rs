@@ -47,7 +47,7 @@ impl<const D: usize> Grid<Float, D> {
         let coord_val = self.get(&coord).expect("coord not in grid");
 
         for i in 0..D {
-            let modify_coord = |c: usize, i: usize, add: bool| {
+            let modify_coord = |i: usize, add: bool| {
                 coord
                     .0
                     .iter()
@@ -69,10 +69,10 @@ impl<const D: usize> Grid<Float, D> {
             };
 
             gradient.0[i] = (self
-                .get(&CoordInt::<D>(modify_coord(coord.0[i], i, true)))
+                .get(&CoordInt::<D>(modify_coord(i, true)))
                 .unwrap_or(coord_val)
                 - self
-                    .get(&CoordInt::<D>(modify_coord(coord.0[i], i, false)))
+                    .get(&CoordInt::<D>(modify_coord(i, false)))
                     .unwrap_or(coord_val))
                 / (2.0 * self.delta);
         }
