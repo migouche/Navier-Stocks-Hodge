@@ -1,6 +1,9 @@
 extern crate minifb;
 
-use crate::simulation::{self, grid::CoordInt};
+use crate::simulation::{
+    self,
+    grid::{CoordInt, Int},
+};
 
 pub const WIDTH: usize = 20;
 pub const HEIGHT: usize = 20;
@@ -16,7 +19,7 @@ impl FluidSimulation {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
             grid: simulation::grid::Grid::new(
-                simulation::grid::CoordInt::<2>([width, height]),
+                simulation::grid::CoordInt::<2>([width as Int, height as Int]),
                 1.0,
             ),
             width,
@@ -31,7 +34,7 @@ impl FluidSimulation {
     pub fn draw(&self, buffer: &mut [u32], window_width: usize, window_height: usize) {
         for y in 0..self.height {
             for x in 0..self.width {
-                let density = self.grid.get(&CoordInt([x, y]));
+                let density = self.grid.get(&CoordInt([x as Int, y as Int]));
                 let color = density
                     .map(|d| self.density_to_color(*d))
                     .unwrap_or(0xff0000ff);
@@ -71,7 +74,7 @@ impl FluidSimulation {
         if x < self.width && y < self.height {
             //(self.grid[&Coordint[x, y]] + 0.05).min(1.0);
             //self.grid.get_mut(&CoordInt([x, y])) = self.grid.get(&CoordInt([x, y])).map(|v| (v + 0.05).min(1.0));
-            if let Some(value) = self.grid.get_mut(&CoordInt([x, y])) {
+            if let Some(value) = self.grid.get_mut(&CoordInt([x as Int, y as Int])) {
                 *value = (*value + 0.05).min(1.0);
             }
         }

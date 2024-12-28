@@ -4,13 +4,9 @@ mod ui;
 use std::time::{Duration, Instant};
 
 use minifb::{Key, MouseButton, MouseMode, Window, WindowOptions};
-use simulation::vector::Vector;
 use ui::ui::{FluidSimulation, CELL_SIZE, HEIGHT, WIDTH};
 
 fn main() {
-    let density_array =
-        simulation::grid::Grid::<f32, 2>::new(simulation::grid::CoordInt([WIDTH, HEIGHT]), 1.0);
-
     let window_width = WIDTH * CELL_SIZE;
     let window_height = HEIGHT * CELL_SIZE;
 
