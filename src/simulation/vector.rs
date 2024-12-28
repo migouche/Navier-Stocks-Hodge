@@ -75,7 +75,7 @@ impl<const D: usize> std::ops::Div<Float> for Vector<D> {
 // implement equality
 impl<const D: usize> std::cmp::PartialEq for Vector<D> {
     fn eq(&self, other: &Self) -> bool {
-       self.0.eq(&other.0)
+        self.0.eq(&other.0)
     }
 }
 
@@ -96,7 +96,12 @@ impl<const D: usize> RelativeEq for Vector<D> {
         Float::default_max_relative()
     }
 
-    fn relative_eq(&self, other: &Self, epsilon: Self::Epsilon, max_relative: Self::Epsilon) -> bool {
+    fn relative_eq(
+        &self,
+        other: &Self,
+        epsilon: Self::Epsilon,
+        max_relative: Self::Epsilon,
+    ) -> bool {
         self.0.relative_eq(&other.0, epsilon, max_relative)
     }
 }

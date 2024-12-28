@@ -15,7 +15,10 @@ pub struct FluidSimulation {
 impl FluidSimulation {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
-            grid: simulation::grid::Grid::new(simulation::grid::CoordInt::<2>([width, height]), 1.0),
+            grid: simulation::grid::Grid::new(
+                simulation::grid::CoordInt::<2>([width, height]),
+                1.0,
+            ),
             width,
             height,
         }
@@ -29,13 +32,23 @@ impl FluidSimulation {
         for y in 0..self.height {
             for x in 0..self.width {
                 let density = self.grid.get(&CoordInt([x, y]));
-                let color = density.map(|d| self.density_to_color(*d)).unwrap_or(0xff0000ff);
+                let color = density
+                    .map(|d| self.density_to_color(*d))
+                    .unwrap_or(0xff0000ff);
                 self.draw_cell(buffer, x, y, color, window_width, window_height);
             }
         }
     }
 
-    fn draw_cell(&self, buffer: &mut [u32], x: usize, y: usize, color: u32, window_width: usize, window_height: usize) {
+    fn draw_cell(
+        &self,
+        buffer: &mut [u32],
+        x: usize,
+        y: usize,
+        color: u32,
+        window_width: usize,
+        window_height: usize,
+    ) {
         let start_x = x * CELL_SIZE;
         let start_y = y * CELL_SIZE;
         for dy in 0..CELL_SIZE {
