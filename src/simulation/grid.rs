@@ -132,13 +132,25 @@ impl<const D: usize> Grid<Vector<D>, D> {
 impl<T: Default + Clone, const D: usize> Grid<T, D> {
     // laplace
 }
-impl<const D: usize> FromIterator<usize> for CoordInt<D> {
-    fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
-        let mut iter = iter.into_iter();
-        let mut arr = [0; D];
-        for i in 0..D {
-            arr[i] = iter.next().expect("not enough elements in iterator") as Int;
+
+impl<const D: usize> TryFrom<Vec<usize>> for CoordInt<D> {
+    type Error = &'static str;
+
+    fn try_from(vec: Vec<usize>) -> Result<Self, Self::Error> {
+        if vec.len() == D {
+            let arr: [usize; D] = vec.try_into().map_err(|_| "Size mismatch")?;
+            let arr: [Int; D] = arr.map(|x| x as Int);
+            Ok(CoordInt(arr))
+        } else {
+            Err("Size mismatch")
         }
-        CoordInt::<D>(arr)
     }
 }
+
+impl<const D: usize> FromIterator<usize> for CoordInt<D> {
+    fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
+        let vec: Vec<usize> = iter.into_iter().collect();
+        vec.try_into().expect("Size mismatch")
+    }
+}
+
