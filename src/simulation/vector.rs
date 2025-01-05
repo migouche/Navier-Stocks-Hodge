@@ -1,5 +1,7 @@
 use approx::{AbsDiffEq, RelativeEq, UlpsEq};
 
+use super::grid::CoordInt;
+
 pub type Float = f64;
 
 #[derive(Debug, Clone, Copy)]
@@ -8,6 +10,33 @@ pub struct Vector<const D: usize>(pub [Float; D]);
 impl<const D: usize> Default for Vector<D> {
     fn default() -> Self {
         Self([0.0; D])
+    }
+}
+
+impl<const D: usize> Vector<D> {
+    pub fn from_coord_int(value: CoordInt<D>, delta: Float) -> Self {
+        value
+            .0
+            .iter()
+            .map(|i| *i as Float * delta)
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap()
+    }
+}
+
+impl<const D: usize> TryFrom<Vec<Float>> for Vector<D> {
+    type Error = &'static str;
+
+    fn try_from(value: Vec<Float>) -> Result<Self, Self::Error> {
+        if value.len() != D {
+            return Err("Vector dimension mismatch");
+        }
+        let mut array = [0.0; D];
+        for i in 0..D {
+            array[i] = value[i];
+        }
+        Ok(Vector(array))
     }
 }
 

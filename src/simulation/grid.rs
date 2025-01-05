@@ -1,8 +1,18 @@
+use std::{
+    iter::Product, ops::{Add, Div, Mul, Sub}, path::Iter, process::Output
+};
+
 use super::vector::{Float, Vector};
 
 pub type Int = i32;
 #[derive(Clone, Copy, Debug)]
 pub struct CoordInt<const D: usize>(pub [Int; D]);
+
+impl<const D: usize> Default for CoordInt<D> {
+    fn default() -> Self {
+        CoordInt([0; D])
+    }
+}
 
 pub struct Grid<T, const D: usize> {
     vec: Vec<T>,
@@ -47,6 +57,48 @@ impl<T: Default + Clone, const D: usize> Grid<T, D> {
     pub fn get_mut(&mut self, index: &CoordInt<D>) -> Option<&mut T> {
         let index = self.flatten_index(index);
         self.vec.get_mut(index)
+    }
+}
+
+impl<
+        T: Default + Clone + Add<Output = T> + Mul<Float, Output = T> + Product<Float>,
+        const D: usize,
+    > Grid<T, D>
+{
+    pub fn get_at(&self, pos: &Vector<D>) -> T {
+        // interpolate D-dimensionally between the 2^D closest points
+        let mut index = CoordInt::<D>::default();
+        let mut weights = [0.0; D];
+        for i in 0..D {
+            let coord = (pos.0[i] / self.delta)
+                .max(0.0)
+                .min(self.size.0[i] as Float - 1.0);
+            let lower = (coord.floor() as Int).min(self.size.0[i] - 2);
+
+            index.0[i] = lower;
+            weights[i] = coord - lower as Float;
+        }
+
+        let mut sum = T::default();
+        for i in 0..1 << D {
+            let mut index = index.clone();
+            for j in 0..D {
+                if i & (1 << j) != 0 {
+                    index.0[j] += 1;
+                }
+            }
+            let weight: Float = (0..D)
+                .map(|j| {
+                    if i & (1 << j) != 0 {
+                        weights[j]
+                    } else {
+                        1.0 - weights[j]
+                    }
+                })
+                .product();
+            sum = sum + self.get(&index).unwrap().clone() * weight;
+        }
+        sum
     }
 }
 
@@ -129,8 +181,58 @@ impl<const D: usize> Grid<Vector<D>, D> {
     }
 }
 
-impl<T: Default + Clone, const D: usize> Grid<T, D> {
+impl<
+        T: Default
+            + Clone
+            + Mul<Float, Output = T>
+            + Sub<Output = T>
+            + Div<Float, Output = T>
+            + Add<Output = T>,
+        const D: usize,
+    > Grid<T, D>
+where
+    for<'a> &'a T: Add<Output = T>,
+{
     // laplace
+    pub fn laplace(&self, coord: CoordInt<D>) -> T {
+        let mut acc = T::default();
+        let coord_val = self.get(&coord).expect("coord not in grid");
+        for i in 0..D {
+            let modify_coord = |add: Int| {
+                coord
+                    .0
+                    .iter()
+                    .zip((0..D).collect::<Vec<usize>>())
+                    .map(|(c, c_i)| if c_i == i { c + add } else { *c })
+                    .collect::<Vec<Int>>()
+                    .try_into()
+                    .unwrap()
+            };
+
+            acc = acc
+                + self
+                    .get(&CoordInt::<D>(modify_coord(1)))
+                    .unwrap_or(coord_val)
+                    .clone()
+                + self
+                    .get(&CoordInt::<D>(modify_coord(-1)))
+                    .unwrap_or(coord_val)
+                    .clone();
+        }
+        (acc - coord_val.clone() * 2.0 * D as Float) / (self.delta * self.delta)
+    }
+}
+
+impl<
+        T: Default + Clone + Add<Output = T> + Mul<Float, Output = T> + Product<Float>,
+        const D: usize,
+    > Grid<T, D>
+{
+    pub fn advect(&self, velocity: &Grid<Vector<D>, D>, coord: CoordInt<D>, dt: Float) -> T {
+        let velocity = velocity.get(&coord).expect("coord not in grid");
+        let new_pos = Vector::from_coord_int(coord, self.delta) - velocity.clone() * dt;
+        self.get_at(&new_pos)
+    }
 }
 
 impl<const D: usize> TryFrom<Vec<usize>> for CoordInt<D> {
@@ -154,3 +256,45 @@ impl<const D: usize> FromIterator<usize> for CoordInt<D> {
     }
 }
 
+pub struct GridIter<'b, T: Clone + Default, const D: usize> {
+    grid: &'b Grid<T, D>,
+    coord: CoordInt<D>,
+    start: bool
+}
+
+impl<'a, T: Clone + Default, const D: usize> Iterator for GridIter<'a, T, D> {
+    type Item = (CoordInt<D>, &'a T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        println!("coord: {:?}", self.coord);
+        if !self.start {
+            self.start = true;
+            return self.grid.get(&self.coord).map(|r| (self.coord, r));
+        }
+
+        self.coord.0[D - 1] += 1;
+        for i in (0..D).rev() {
+            if self.coord.0[i] >= self.grid.size.0[i] {
+                if i == 0 {
+                    return None;
+                }
+                self.coord.0[i] = 0;
+                self.coord.0[i - 1] += 1;
+            }
+        }
+        self.grid.get(&self.coord).map(|r| (self.coord, r))
+    }
+}
+
+impl<'a, T: Clone + Default, const D: usize> IntoIterator for &'a Grid<T, D> {
+    type Item = (CoordInt<D>, &'a T);
+    type IntoIter = GridIter<'a, T, D>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        GridIter {
+            grid: self,
+            coord: CoordInt::<D>::default(),
+            start: false
+        }
+    }
+}
